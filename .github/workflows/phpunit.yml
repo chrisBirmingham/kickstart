@@ -6,10 +6,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v3
+        with:
+          path: /tmp/composer-cache
+          key: ${{ runner.os }}-${{ hashFiles('**/composer.lock') }}
+
       - name: Setup PHP
         uses: php-actions/composer@v6
         with:
           php_version: 8.0
+
       - name: Run phpunit
         uses: php-actions/phpunit@v3
         with:
