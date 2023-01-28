@@ -1,13 +1,17 @@
 {
     "name": "intermaterium/kickstart",
     "description": "AWS lambda runtime wrapper",
-    "type": "project",
+    "type": "library",
+    "license": "MIT",
     "require": {
         "guzzlehttp/guzzle": "^7.5",
         "ext-json": "*",
         "php": ">=8.0"
     },
-    "license": "MIT",
+    "require-dev": {
+        "phpunit/phpunit": "^9.5",
+        "mockery/mockery": "^1.5"
+    },
     "autoload": {
         "psr-4": {
             "Intermaterium\\Kickstart\\": "src/"
@@ -23,9 +27,5 @@
             "name": "Christopher Birmingham",
             "email": "chris.birmingham@hotmail.co.uk"
         }
-    ],
-    "require-dev": {
-        "phpunit/phpunit": "^9.5",
-        "mockery/mockery": "^1.5"
-    }
+    ]
 }

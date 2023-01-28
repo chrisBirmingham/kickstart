@@ -12,6 +12,7 @@ class RuntimeFactory
     /**
      * @param string $api
      * @param string $version
+     * @return Runtime
      */
     public function create(string $api, string $version = self::DEFAULT_VERSION): Runtime
     {
