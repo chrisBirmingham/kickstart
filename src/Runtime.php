@@ -47,19 +47,26 @@ class Runtime
 
     /**
      * @param callable $handler
+     * @return bool
      */
-    public function invoke(callable $handler): void
+    public function invoke(callable $handler): bool
     {
-        list($data, $context) = $this->getNextEvent();
+        try {
+            list($data, $context) = $this->getNextEvent();
 
-        $response = call_user_func($handler, $data, $context);
+            $response = ($handler)($data, $context);
 
-        $this->sendResponse($context->getAwsRequestId(), json_encode($response));
+            $this->sendResponse($context->getAwsRequestId(), $response);
+            return true;
+        } catch (\Throwable $exception) {
+            $this->sendFailure($exception, (isset($context) ? $context->getAwsRequestId() : null));
+            return false;
+        }
     }
 
     /**
      * @return array
-     * @throws JsonException
+     * @throws \JsonException
      */
     protected function getNextEvent(): array
     {
@@ -81,11 +88,63 @@ class Runtime
      * @param string $invocationId
      * @param string $response
      */
-    protected function sendResponse(string $invocationId, string $response): void
+    protected function sendResponse(string $invocationId, mixed $response): void
     {
         $url = "http://$this->api/$this->version/runtime/invocation/$invocationId/response";
-        $this->client->post($url, [
-            "body" => $response
-        ]);
+        $this->sendJson($url, $response);
+    }
+
+    /**
+     * @param \Throwable $exception
+     * @param ?string $invocationId
+     */
+    protected function sendFailure(\Throwable $exception, ?string $invocationId = null): void
+    {
+        if ($invocationId === null) {
+            $this->initialisationFailure(exception: $exception);
+        } else {
+            $url = "http://$this->api/$this->version/runtime/invocation/$invocationId/error";
+
+            $response = [
+                "errorMessage" => $exception->getMessage(),
+                "type" => get_class($exception),
+                "stackTrace" => explode(PHP_EOL, $exception->getTraceAsString())
+            ];
+
+            $this->sendJson($url, $response);
+        }
+    }
+
+    /**
+     * @param string $message
+     * @param ?\Throwable $exception
+     */
+    public function initialisationFailure(string $message = "", ?\Throwable $exception = null): void
+    {
+        $url = "http://$this->api/$this->version/runtime/init/error";
+
+        $response = [
+            "errorMessage" => $message . ($exception ? $exception->getMessage() : ""),
+            "errorType" => "Runtime." . ($exception ? get_class($exception) : "Internal"),
+            "stackTrace" => ($exception ? explode(PHP_EOL, $exception->getTraceAsString()) : [])
+        ];
+
+        $this->sendJson($url, $response);
+    }
+
+    /**
+     * @param string $url
+     * @param mixed $response
+     * @throws \InvalidArgumentException
+     */
+    protected function sendJson(string $url, mixed $response): void
+    {
+        $response = json_encode($response);
+
+        if ($response === false) {
+            throw new \InvalidArgumentException("Response from handler couldn't be json encoded. " . json_last_error_msg());
+        }
+
+        $this->client->post($url, ["body" => $response]);
     }
 }
