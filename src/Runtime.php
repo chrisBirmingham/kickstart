@@ -75,9 +75,9 @@ class Runtime
 
         $context = $this->contextFactory->create(
             $response->getHeader("Lambda-Runtime-Aws-Request-Id")[0],
-            (int) $response->getHeader("Lambda-Runtime-Deadline-Ms")[0],
-            $response->getHeader("Lambda-Runtime-Invoked-Function-Arn")[0],
-            $response->getHeader("Lambda-Runtime-Trace-Id")[0]
+            (int) ($response->getHeader("Lambda-Runtime-Deadline-Ms")[0] ?? 0),
+            $response->getHeader("Lambda-Runtime-Invoked-Function-Arn")[0] ?? "",
+            $response->getHeader("Lambda-Runtime-Trace-Id")[0] ?? ""
         );
 
         $data = json_decode($response->getBody()->getContents(), true, flags: JSON_THROW_ON_ERROR);
@@ -124,7 +124,7 @@ class Runtime
         $url = "http://$this->api/$this->version/runtime/init/error";
 
         $response = [
-            "errorMessage" => $message . ($exception ? $exception->getMessage() : ""),
+            "errorMessage" => "$message " . ($exception ? $exception->getMessage() : ""),
             "errorType" => "Runtime." . ($exception ? get_class($exception) : "Internal"),
             "stackTrace" => ($exception ? explode(PHP_EOL, $exception->getTraceAsString()) : [])
         ];
