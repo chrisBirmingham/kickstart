@@ -67,8 +67,10 @@ class Runtime
         $response = $this->client->get($url);
 
         $context = $this->contextFactory->create(
-            $response->getHeader("lambda-runtime-aws-request-id")[0],
-            $response->getHeader("lambda-runtime-invoked-function-arn")[0]
+            $response->getHeader("Lambda-Runtime-Aws-Request-Id")[0],
+            (int) $response->getHeader("Lambda-Runtime-Deadline-Ms")[0],
+            $response->getHeader("Lambda-Runtime-Invoked-Function-Arn")[0],
+            $response->getHeader("Lambda-Runtime-Trace-Id")[0]
         );
 
         $data = json_decode($response->getBody()->getContents(), true, flags: JSON_THROW_ON_ERROR);

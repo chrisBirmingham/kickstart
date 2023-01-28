@@ -18,7 +18,9 @@ class RuntimeTest extends TestCase
     public function testCallout(): void
     {
         $id = "this is an id";
+        $ms = 500000;
         $funcArn = "this is a func";
+        $traceId = "this is another id";
         $body = '{"data": "test data"}';
         $postData = "Hello world";
 
@@ -35,22 +37,15 @@ class RuntimeTest extends TestCase
         $contextFactory = Mockery::mock(ContextFactory::class);
         $contextFactory
             ->shouldReceive("create")
-            ->with($id, $funcArn)
+            ->with($id, $ms, $funcArn, $traceId)
             ->andReturn($context)
             ->once();
 
         $getResponse = Mockery::mock(ResponseInterface::class);
         $getResponse
             ->shouldReceive("getHeader")
-            ->with("lambda-runtime-aws-request-id")
-            ->andReturn([$id])
-            ->once();
-
-        $getResponse
-            ->shouldReceive("getHeader")
-            ->with("lambda-runtime-invoked-function-arn")
-            ->andReturn([$funcArn])
-            ->once();
+            ->andReturn([$id], [$ms], [$funcArn], [$traceId])
+            ->times(4);
 
         $getResponse
             ->shouldReceive("getBody->getContents")
