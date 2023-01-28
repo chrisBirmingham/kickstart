@@ -1,0 +1,16 @@
+name: phpunit
+on: [push]
+
+jobs:
+  run-phpunit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v1
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.0'
+          tools: composer:v2
+      - name: Run phpunit
+        run: |
+          vendor/bin/phpunit
