@@ -10,7 +10,7 @@ interface HandlerLocatorInterface
     /**
      * @param string $id
      * @return callable
-     * @throws InvalidHanderException
+     * @throws InvalidHandlerException
      * @throws UnknownHandlerException
      */
     public function get(string $id): callable;

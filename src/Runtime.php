@@ -3,6 +3,7 @@
 namespace Intermaterium\Kickstart;
 
 use GuzzleHttp\Client;
+use GuzzleHttp\Exception\GuzzleException;
 use Intermaterium\Kickstart\Context\ContextFactory;
 
 class Runtime
@@ -48,6 +49,7 @@ class Runtime
     /**
      * @param callable $handler
      * @return bool
+     * @throws GuzzleException
      */
     public function invoke(callable $handler): bool
     {
@@ -67,6 +69,7 @@ class Runtime
     /**
      * @return array
      * @throws \JsonException
+     * @throws GuzzleException
      */
     protected function getNextEvent(): array
     {
@@ -87,6 +90,7 @@ class Runtime
     /**
      * @param string $invocationId
      * @param string $response
+     * @throws GuzzleException
      */
     protected function sendResponse(string $invocationId, mixed $response): void
     {
@@ -97,6 +101,7 @@ class Runtime
     /**
      * @param \Throwable $exception
      * @param ?string $invocationId
+     * @throws GuzzleException
      */
     protected function sendFailure(\Throwable $exception, ?string $invocationId = null): void
     {
@@ -107,7 +112,7 @@ class Runtime
 
             $response = [
                 "errorMessage" => $exception->getMessage(),
-                "type" => get_class($exception),
+                "type" => "Runtime." . get_class($exception),
                 "stackTrace" => explode(PHP_EOL, $exception->getTraceAsString())
             ];
 
@@ -118,6 +123,7 @@ class Runtime
     /**
      * @param string $message
      * @param ?\Throwable $exception
+     * @throws GuzzleException
      */
     public function initialisationFailure(string $message = "", ?\Throwable $exception = null): void
     {
@@ -125,7 +131,7 @@ class Runtime
 
         $response = [
             "errorMessage" => "$message " . ($exception ? $exception->getMessage() : ""),
-            "errorType" => "Runtime." . ($exception ? get_class($exception) : "Internal"),
+            "errorType" => "Init." . ($exception ? get_class($exception) : "Internal"),
             "stackTrace" => ($exception ? explode(PHP_EOL, $exception->getTraceAsString()) : [])
         ];
 
@@ -136,6 +142,7 @@ class Runtime
      * @param string $url
      * @param mixed $response
      * @throws \InvalidArgumentException
+     * @throws GuzzleException
      */
     protected function sendJson(string $url, mixed $response): void
     {
