@@ -1,6 +1,6 @@
 <?php
 
-namespace Intermaterium\Kickstart\Test\Unit;
+namespace Intermaterium\KickStart\Test\Unit;
 
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
@@ -16,15 +16,9 @@ class RuntimeTest extends TestCase
 {
     use MockeryPHPUnitIntegration;
 
-    /**
-     * @var \Mockery\MockInterface|\Mockery\LegacyMockInterface|Client
-     */
-    protected $client;
+    protected \Mockery\MockInterface|\Mockery\LegacyMockInterface|Client $client;
 
-    /**
-     * @var \Mockery\MockInterface|\Mockery\LegacyMockInterface|ContextFactory
-     */
-    protected $contextFactory;
+    protected \Mockery\MockInterface|\Mockery\LegacyMockInterface|ContextFactory $contextFactory;
 
     public function setUp(): void
     {
@@ -41,7 +35,7 @@ class RuntimeTest extends TestCase
         $body = '{"data": "test data"}';
         $postData = "Hello world";
 
-        $handler = function(array $data, Context $context) use ($body, $postData): mixed {
+        $handler = function(array $data, Context $context) use ($body, $postData): string {
             $this->assertSame(json_decode($body, true), $data);
             return $postData;
         };
@@ -90,7 +84,7 @@ class RuntimeTest extends TestCase
 
         $expectedUrl = "http://$api/$version/runtime/init/error";
 
-        $handler = function(array $data, Context $context): mixed {};
+        $handler = function(array $data, Context $context): void {};
 
         $exception = Mockery::mock(RequestException::class);
 

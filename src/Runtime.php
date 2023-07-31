@@ -8,25 +8,13 @@ use Intermaterium\Kickstart\Context\ContextFactory;
 
 class Runtime
 {
-    /**
-     * @var Client
-     */
-    protected $client;
+    protected Client $client;
 
-    /**
-     * @var ContextFactory
-     */
-    protected $contextFactory;
+    protected ContextFactory $contextFactory;
 
-    /**
-     * @var string
-     */
-    protected $api;
+    protected string $api;
 
-    /**
-     * @var string
-     */
-    protected $version;
+    protected string $version;
 
     /**
      * @param Client $client
@@ -50,18 +38,24 @@ class Runtime
      * @param callable $handler
      * @return bool
      * @throws GuzzleException
+     * @throws \JsonException
      */
     public function invoke(callable $handler): bool
     {
         try {
             list($data, $context) = $this->getNextEvent();
+        } catch (GuzzleException|\JsonException $e) {
+            $this->initialisationFailure('Encountered error while trying to retrieve lambda event', $e);
+            return false;
+        }
 
+        try {
             $response = ($handler)($data, $context);
 
             $this->sendResponse($context->getAwsRequestId(), $response);
             return true;
         } catch (\Throwable $exception) {
-            $this->sendFailure($exception, (isset($context) ? $context->getAwsRequestId() : null));
+            $this->sendFailure($exception, $context->getAwsRequestId());
             return false;
         }
     }
@@ -100,42 +94,56 @@ class Runtime
 
     /**
      * @param \Throwable $exception
-     * @param ?string $invocationId
+     * @param string $invocationId
      * @throws GuzzleException
      */
-    protected function sendFailure(\Throwable $exception, ?string $invocationId = null): void
+    protected function sendFailure(\Throwable $exception, string $invocationId): void
     {
-        if ($invocationId === null) {
-            $this->initialisationFailure(exception: $exception);
-        } else {
-            $url = "http://$this->api/$this->version/runtime/invocation/$invocationId/error";
+        $url = "http://$this->api/$this->version/runtime/invocation/$invocationId/error";
 
-            $response = [
-                "errorMessage" => $exception->getMessage(),
-                "type" => "Runtime." . get_class($exception),
-                "stackTrace" => explode(PHP_EOL, $exception->getTraceAsString())
-            ];
+        $response = [
+            "errorMessage" => $exception->getMessage(),
+            "type" => "Runtime." . $exception::class,
+            "stackTrace" => $exception->getTraceAsString(),
+            "previousErrors" => $this->getPreviousExceptionMessages($exception)
+        ];
 
-            $this->sendJson($url, $response);
-        }
+        $this->sendJson($url, $response);
+
     }
 
     /**
      * @param string $message
-     * @param ?\Throwable $exception
+     * @param \Exception $exception
      * @throws GuzzleException
      */
-    public function initialisationFailure(string $message = "", ?\Throwable $exception = null): void
+    public function initialisationFailure(string $message, \Exception $exception): void
     {
         $url = "http://$this->api/$this->version/runtime/init/error";
 
         $response = [
-            "errorMessage" => "$message " . ($exception ? $exception->getMessage() : ""),
-            "errorType" => "Init." . ($exception ? get_class($exception) : "Internal"),
-            "stackTrace" => ($exception ? explode(PHP_EOL, $exception->getTraceAsString()) : [])
+            "errorMessage" => "$message. Reason: " . $exception->getMessage(),
+            "errorType" => "Init." . $exception::class,
+            "stackTrace" => $exception->getTrace(),
+            "previousErrors" => $this->getPreviousExceptionMessages($exception)
         ];
 
         $this->sendJson($url, $response);
+    }
+
+    /**
+     * @param \Throwable $exception
+     * @return string[]
+     */
+    protected function getPreviousExceptionMessages(\Throwable $exception): array
+    {
+        $messages = [];
+
+        while (($exception = $exception->getPrevious()) !== null) {
+            $messages[] = $exception->getMessage();
+        }
+
+        return $messages;
     }
 
     /**
