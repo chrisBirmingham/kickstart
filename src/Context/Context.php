@@ -4,25 +4,13 @@ namespace Intermaterium\Kickstart\Context;
 
 class Context
 {
-    /**
-     * @var string
-     */
-    protected $awsRequestId;
+    protected string $awsRequestId;
 
-    /**
-     * @var int
-     */
-    protected $lambdaRuntimeDeadlineMs;
+    protected int $lambdaRuntimeDeadlineMs;
 
-    /**
-     * @var string
-     */
-    protected $invokedFunctionArn;
+    protected string $invokedFunctionArn;
 
-    /**
-     * @var string
-     */
-    protected $lambdaRuntimeTraceId;
+    protected string $lambdaRuntimeTraceId;
 
     /**
      * @param string $awsRequestId,

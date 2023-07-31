@@ -10,12 +10,9 @@ class FileHandlerLocator implements HandlerLocatorInterface
     /**
      * @var callable[]
      */
-    protected $handlers = [];
+    protected array $handlers = [];
 
-    /**
-     * @var $root
-     */
-    protected $root;
+    protected string $root;
 
     /**
      * @param string $root
