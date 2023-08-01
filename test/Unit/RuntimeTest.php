@@ -6,6 +6,7 @@ use GuzzleHttp\Client;
 use GuzzleHttp\Exception\RequestException;
 use Intermaterium\Kickstart\Context\Context;
 use Intermaterium\Kickstart\Context\ContextFactory;
+use Intermaterium\Kickstart\Response\ErrorResponseBuilder;
 use Intermaterium\Kickstart\Runtime;
 use Mockery;
 use Mockery\Adapter\Phpunit\MockeryPHPUnitIntegration;
@@ -20,10 +21,13 @@ class RuntimeTest extends TestCase
 
     protected \Mockery\MockInterface|\Mockery\LegacyMockInterface|ContextFactory $contextFactory;
 
+    protected \Mockery\MockInterface|\Mockery\LegacyMockInterface|ErrorResponseBuilder $errorResponseBuilder;
+
     public function setUp(): void
     {
         $this->client = Mockery::mock(Client::class);
         $this->contextFactory = Mockery::mock(ContextFactory::class);
+        $this->errorResponseBuilder = Mockery::mock(ErrorResponseBuilder::class);
     }
 
     public function testCallout(): void
@@ -72,7 +76,13 @@ class RuntimeTest extends TestCase
             ->with(Mockery::type("string"), ["body" => json_encode($postData)])
             ->once();
 
-        $runtime = new Runtime($this->client, $this->contextFactory, "", "");
+        $runtime = new Runtime(
+            $this->client,
+            $this->contextFactory,
+            $this->errorResponseBuilder,
+            "",
+            ""
+        );
 
         $runtime->invoke($handler);
     }
@@ -98,7 +108,19 @@ class RuntimeTest extends TestCase
             ->with($expectedUrl, Mockery::type("array"))
             ->once();
 
-        $runtime = new Runtime($this->client, $this->contextFactory, $api, $version);
+        $this->errorResponseBuilder
+            ->shouldReceive('build')
+            ->with($exception, ErrorResponseBuilder::TYPE_INIT)
+            ->andReturn([])
+            ->once();
+
+        $runtime = new Runtime(
+            $this->client,
+            $this->contextFactory,
+            $this->errorResponseBuilder,
+            $api,
+            $version
+        );
 
         $runtime->invoke($handler);
     }
@@ -108,11 +130,12 @@ class RuntimeTest extends TestCase
         $api = "localhost";
         $version = "2018";
         $id = "this is an id";
+        $exception = Mockery::mock(\Exception::class);
 
         $expectedUrl = "http://$api/$version/runtime/invocation/$id/error";
 
-        $handler = function(array $data, Context $context): mixed {
-            throw new \Exception("foobar");
+        $handler = function(array $data, Context $context) use ($exception): mixed {
+            throw $exception;
         };
 
         $context = Mockery::mock(Context::class);
@@ -146,7 +169,19 @@ class RuntimeTest extends TestCase
             ->with($expectedUrl, Mockery::type("array"))
             ->once();
 
-        $runtime = new Runtime($this->client, $this->contextFactory, $api, $version);
+        $this->errorResponseBuilder
+            ->shouldReceive('build')
+            ->with($exception, ErrorResponseBuilder::TYPE_RUNTIME)
+            ->andReturn([])
+            ->once();
+
+        $runtime = new Runtime(
+            $this->client,
+            $this->contextFactory,
+            $this->errorResponseBuilder,
+            $api,
+            $version
+        );
 
         $runtime->invoke($handler);
     }

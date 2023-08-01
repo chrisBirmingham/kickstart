@@ -5,12 +5,15 @@ namespace Intermaterium\Kickstart;
 use GuzzleHttp\Client;
 use GuzzleHttp\Exception\GuzzleException;
 use Intermaterium\Kickstart\Context\ContextFactory;
+use Intermaterium\Kickstart\Response\ErrorResponseBuilder;
 
 class Runtime
 {
     protected Client $client;
 
     protected ContextFactory $contextFactory;
+
+    protected ErrorResponseBuilder $errorResponseBuilder;
 
     protected string $api;
 
@@ -19,17 +22,20 @@ class Runtime
     /**
      * @param Client $client
      * @param ContextFactory $contextFactory
+     * @param ErrorResponseBuilder $errorResponseBuilder
      * @param string $api
      * @param string $version
      */
     public function __construct(
         Client $client,
         ContextFactory $contextFactory,
+        ErrorResponseBuilder $errorResponseBuilder,
         string $api,
         string $version
     ) {
         $this->client = $client;
         $this->contextFactory = $contextFactory;
+        $this->errorResponseBuilder = $errorResponseBuilder;
         $this->api = $api;
         $this->version = $version;
     }
@@ -45,7 +51,7 @@ class Runtime
         try {
             list($data, $context) = $this->getNextEvent();
         } catch (GuzzleException|\JsonException $e) {
-            $this->initialisationFailure('Encountered error while trying to retrieve lambda event', $e);
+            $this->initialisationFailure($e);
             return false;
         }
 
@@ -93,57 +99,27 @@ class Runtime
     }
 
     /**
-     * @param \Throwable $exception
+     * @param \Throwable $throwable
      * @param string $invocationId
      * @throws GuzzleException
      */
-    protected function sendFailure(\Throwable $exception, string $invocationId): void
+    protected function sendFailure(\Throwable $throwable, string $invocationId): void
     {
         $url = "http://$this->api/$this->version/runtime/invocation/$invocationId/error";
-
-        $response = [
-            "errorMessage" => $exception->getMessage(),
-            "type" => "Runtime." . $exception::class,
-            "stackTrace" => $exception->getTraceAsString(),
-            "previousErrors" => $this->getPreviousExceptionMessages($exception)
-        ];
-
+        $response = $this->errorResponseBuilder->build($throwable, ErrorResponseBuilder::TYPE_RUNTIME);
         $this->sendJson($url, $response);
 
     }
 
     /**
-     * @param string $message
      * @param \Exception $exception
      * @throws GuzzleException
      */
-    public function initialisationFailure(string $message, \Exception $exception): void
+    public function initialisationFailure(\Exception $exception): void
     {
         $url = "http://$this->api/$this->version/runtime/init/error";
-
-        $response = [
-            "errorMessage" => "$message. Reason: " . $exception->getMessage(),
-            "errorType" => "Init." . $exception::class,
-            "stackTrace" => $exception->getTrace(),
-            "previousErrors" => $this->getPreviousExceptionMessages($exception)
-        ];
-
+        $response = $this->errorResponseBuilder->build($exception, ErrorResponseBuilder::TYPE_INIT);
         $this->sendJson($url, $response);
-    }
-
-    /**
-     * @param \Throwable $exception
-     * @return string[]
-     */
-    protected function getPreviousExceptionMessages(\Throwable $exception): array
-    {
-        $messages = [];
-
-        while (($exception = $exception->getPrevious()) !== null) {
-            $messages[] = $exception->getMessage();
-        }
-
-        return $messages;
     }
 
     /**
