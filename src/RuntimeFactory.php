@@ -8,7 +8,7 @@ use Intermaterium\Kickstart\Response\ErrorResponseBuilder;
 
 class RuntimeFactory
 {
-    const DEFAULT_VERSION = "2018-06-01";
+    const DEFAULT_VERSION = '2018-06-01';
 
     protected ErrorResponseBuilder $errorResponseBuilder;
 

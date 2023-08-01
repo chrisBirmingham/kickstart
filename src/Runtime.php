@@ -51,7 +51,7 @@ class Runtime
         try {
             list($data, $context) = $this->getNextEvent();
         } catch (GuzzleException|\JsonException $e) {
-            $this->initialisationFailure($e);
+            $this->initialisationFailure('Failed to retrieve current lambda event', $e);
             return false;
         }
 
@@ -77,10 +77,10 @@ class Runtime
         $response = $this->client->get($url);
 
         $context = $this->contextFactory->create(
-            $response->getHeader("Lambda-Runtime-Aws-Request-Id")[0],
-            (int) ($response->getHeader("Lambda-Runtime-Deadline-Ms")[0] ?? 0),
-            $response->getHeader("Lambda-Runtime-Invoked-Function-Arn")[0] ?? "",
-            $response->getHeader("Lambda-Runtime-Trace-Id")[0] ?? ""
+            $response->getHeader('Lambda-Runtime-Aws-Request-Id')[0],
+            (int) ($response->getHeader('Lambda-Runtime-Deadline-Ms')[0] ?? 0),
+            $response->getHeader('Lambda-Runtime-Invoked-Function-Arn')[0] ?? '',
+            $response->getHeader('Lambda-Runtime-Trace-Id')[0] ?? ''
         );
 
         $data = json_decode($response->getBody()->getContents(), true, flags: JSON_THROW_ON_ERROR);
@@ -112,13 +112,14 @@ class Runtime
     }
 
     /**
+     * @param string $message
      * @param \Exception $exception
      * @throws GuzzleException
      */
-    public function initialisationFailure(\Exception $exception): void
+    public function initialisationFailure(string $message, \Exception $exception): void
     {
         $url = "http://$this->api/$this->version/runtime/init/error";
-        $response = $this->errorResponseBuilder->build($exception, ErrorResponseBuilder::TYPE_INIT);
+        $response = $this->errorResponseBuilder->build($exception, ErrorResponseBuilder::TYPE_INIT, $message);
         $this->sendJson($url, $response);
     }
 
@@ -136,6 +137,6 @@ class Runtime
             throw new \InvalidArgumentException("Response from handler couldn't be json encoded. " . json_last_error_msg());
         }
 
-        $this->client->post($url, ["body" => $response]);
+        $this->client->post($url, ['body' => $response]);
     }
 }

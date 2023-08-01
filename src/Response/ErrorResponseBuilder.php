@@ -11,13 +11,15 @@ class ErrorResponseBuilder
     /**
      * @param \Throwable $throwable
      * @param string $type
+     * @param string $message
      * @return array
      */
-    public function build(\Throwable $throwable, string $type): array
+    public function build(\Throwable $throwable, string $type, string $message = ''): array
     {
         $response = [];
 
-        $response['errorMessage'] = $throwable->getMessage();
+        $message = (empty($message) ? '' : "$message. Reason: ");
+        $response['errorMessage'] = $message . $throwable->getMessage();
 
         if ($throwable->getPrevious()) {
             $response['previousErrors'] = $this->getPreviousExceptionMessages($throwable);
