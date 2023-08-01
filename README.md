@@ -18,21 +18,23 @@ Then create a /opt/bootstrap file in your lambdas runtime layer invoking the lib
 
 ```php
 use Intermaterium\Kickstart\Locator\FileHandlerLocator;
+use Intermaterium\Kickstart\Response\ErrorResponseBuilder;
 use Intermaterium\Kickstart\RuntimeFactory;
 
-require_once("/opt/vendor/autoload.php");
+require_once('/opt/vendor/autoload.php');
 
 // Create our runtime from the provided environment
-$runtimeFactory = new RuntimeFactory();
-$runtime = $runtimeFactory->create($_ENV["AWS_LAMBDA_RUNTIME_API"]);
+$errorResponseBuilder = new ErrorResponseBuilder();
+$runtimeFactory = new RuntimeFactory($errorResponseBuilder);
+$runtime = $runtimeFactory->create(getenv('AWS_LAMBDA_RUNTIME_API'));
 
 try {
     // Retrieve the function being invoked by lambda
-    $fileHandlerLocator = new FileHandlerLocator($_ENV["LAMBDA_TASK_ROOT"]);
-    $lambdaHandler = $fileHandlerLocator->get($_ENV["_HANDLER"]);
+    $fileHandlerLocator = new FileHandlerLocator(getenv('LAMBDA_TASK_ROOT'));
+    $lambdaHandler = $fileHandlerLocator->get(getenv('_HANDLER'));
 } catch (\Exception $e) {
     // If we failed to get the handler send an initialisation error and kill the lambda
-    $runtime->initialisationFailure("Failed to get lambda handler, $e");
+    $runtime->initialisationFailure('Failed to get lambda handler', $e);
     exit(1);
 }
 
@@ -50,7 +52,7 @@ Kickstart supports aws lambdas in the form of either php functions like:
 use Intermaterium\Kickstart\Context\Context;
 
 return function($event, Context $context): mixed {
-    return "Hello " . ($event["queryStringParameters"]["name"] ?? "world");
+    return 'Hello ' . ($event['queryStringParameters']['name'] ?? 'world');
 };
 ```
 
@@ -63,7 +65,7 @@ class Handler
 {
     public function __invoke($event, Context $context): mixed
     {
-        return "Hello " . ($event["queryStringParameters"]["name"] ?? "world");
+        return 'Hello ' . ($event['queryStringParameters']['name'] ?? 'world');
     }
 }
 
